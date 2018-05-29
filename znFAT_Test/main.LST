@@ -1,0 +1,107 @@
+C51 COMPILER V9.54   MAIN                                                                  05/29/2018 20:45:19 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "znfat/ZNFAT.H"
+   2          #include "sd.h"
+   3          #include "uart.h"
+   4          #include "string.h"
+   5          unsigned int myTimer=0,first,last;
+   6          struct znFAT_Init_Args idata Init_Args; // 初始化参数集合
+   7          struct FileInfo idata fileinfo;         // 文件信息集合
+   8          unsigned char buf[21]={0};
+   9          void port_mode()            // 端口模式
+  10          {
+  11   1              P0M1=0x00; P0M0=0x00;P1M1=0x00; P1M0=0x00;P2M1=0x00; P2M0=0x00;P3M1=0x00; P3M0=0x00;
+  12   1              P4M1=0x00; P4M0=0x00;P5M1=0x00; P5M0=0x00;P6M1=0x00; P6M0=0x00;P7M1=0x00; P7M0=0x00; 
+  13   1      }
+  14          void Timer0Init(void)           //@22.1184MHz
+  15          {
+  16   1              AUXR &= 0x7F;           
+  17   1              TMOD &= 0xF0;           
+  18   1              TL0 = 0xCD;             
+  19   1              TH0 = 0xF8;             
+  20   1              TF0 = 0;                
+  21   1              TR0 = 1;                
+  22   1               ET0 = 1;
+  23   1      }
+  24          UINT32 fileNum=0;
+  25          int main()
+  26          { 
+  27   1              //unsigned int res=0;
+  28   1              int test=0,i=0;
+  29   1              unsigned int res=0,len=0; 
+  30   1              Timer0Init();
+  31   1              port_mode();                       // 所有IO口设为准双向弱上拉方式。
+  32   1              UART_Init();                                       // 波特率：9600 /22.1184MHZ
+  33   1              UART_Send_Str("串口设置完毕\r\n");
+  34   1              znFAT_Device_Init();                     // 存储设备初始化
+  35   1              UART_Send_Str("SD卡初始化完毕\r\n");
+  36   1              znFAT_Select_Device(0,&Init_Args);       // 选择设备
+  37   1              res=znFAT_Init();      // 文件系统初始化         
+  38   1              if(!res)               // 文件系统初始化成功
+  39   1              {
+  40   2                      UART_Send_Str("文件系统初始化成功\r\n");
+  41   2                      UART_Send_StrNum("DBR扇区地址:",Init_Args.BPB_Sector_No);   
+  42   2                      UART_Send_StrNum("总存储容量(K字节):",Init_Args.Total_SizeKB); 
+  43   2                      UART_Send_StrNum("每扇区字节(个):",Init_Args.BytesPerSector); 
+  44   2                      UART_Send_StrNum("FAT扇区数:",Init_Args.FATsectors);  
+  45   2                      UART_Send_StrNum("每簇扇区(个):",Init_Args.SectorsPerClust); 
+  46   2                      UART_Send_StrNum("第一FAT扇区:",Init_Args.FirstFATSector); 
+  47   2                      UART_Send_StrNum("根目录开始扇区:",Init_Args.FirstDirSector); 
+  48   2                      UART_Send_StrNum("FSINFO扇区地址:",Init_Args.FSINFO_Sec);
+  49   2                      UART_Send_StrNum("下一空闲簇:",Init_Args.Next_Free_Cluster);
+  50   2                      UART_Send_StrNum("剩余空闲簇:",Init_Args.Free_nCluster); 
+  51   2              }
+  52   1              else                  // 文件系统初始化失败
+  53   1              {
+  54   2                      UART_Send_StrNum("文件系统初始化失败 , 错误码:",res);
+  55   2              }       
+C51 COMPILER V9.54   MAIN                                                                  05/29/2018 20:45:19 PAGE 2   
+
+  56   1              res=znFAT_Modify_Name(&fileinfo,"/unsend*.txt","12345.txt",0,1);
+  57   1              if(!res)
+  58   1              {
+  59   2                      UART_Send_Str("修改成功！");
+  60   2              }else
+  61   1              {
+  62   2                      UART_Send_StrNum("错误代码：",res); 
+  63   2              }
+  64   1              first=myTimer;
+  65   1              addFAT_Find_File_Num(&fileNum,"/test");
+  66   1              znFAT_Flush_FS();     // 刷新文件系统
+  67   1              
+  68   1              UART_Send_StrNum("file num is :",fileNum);
+  69   1              UART_Send_StrNum("\ntime is ",last-first);
+  70   1              UART_Send_StrNum("\n times",i);
+  71   1              while(1);
+  72   1              return 0;
+  73   1      } 
+  74          
+  75          void timer0() interrupt 1 
+  76          {
+  77   1              myTimer++;
+  78   1      }
+  79          
+  80          
+  81          
+*** WARNING C294 IN LINE 72 OF main.c: unreachable code
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    536    ----
+   CONSTANT SIZE    =    306    ----
+   XDATA SIZE       =     31       8
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =     89    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

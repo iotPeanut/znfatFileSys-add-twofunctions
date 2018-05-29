@@ -1,0 +1,910 @@
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE SD
+OBJECT MODULE PLACED IN sd.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE sd.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "sd.h"
+   2          #include "myfun.h" 
+   3          #include "uart.h"
+   4          
+   5          //±äÁ¿¶¨Òå
+   6          //--------------------------------------------------------------
+   7          bit is_init;  //ÔÚ³õÊ¼»¯µÄÊ±ºòÉèÖÃ´Ë±äÁ¿Îª1,Í¬²½Êý¾Ý´«Êä£¨SPI£©»á·ÅÂý 
+   8          
+   9          unsigned char Addr_Mode=0;        // Ñ°Ö··½Ê½£¬1Îª¿éÑ°Ö·£¬0Îª×Ö½ÚÑ°Ö·£¨Ê¹ÓÃÊ±Ðè½«µØÖ·×óÒÆ9Î»£©
+  10          unsigned char SD_Ver=SD_VER_ERR;  // SD¿¨µÄ°æ±¾
+  11          //---------------------------------------------------------------
+  12          
+  13          unsigned char bdata _dat; //ÓÃÓÚÓÅ»¯Ä£ÄâSPIµÄÖÐ¼äbdataÀàÐÍ±äÁ¿£¬·½±ãÈ¡¸÷¸öÎ»
+  14          sbit _dat7=_dat^7;
+  15          sbit _dat6=_dat^6;
+  16          sbit _dat5=_dat^5;
+  17          sbit _dat4=_dat^4;
+  18          sbit _dat3=_dat^3;
+  19          sbit _dat2=_dat^2;
+  20          sbit _dat1=_dat^1;
+  21          sbit _dat0=_dat^0;
+  22          
+  23          unsigned char IO_SPI_Init(void)  // ¶ÔSPIÓÐ¹Ø³õÊ¼»¯
+  24          {
+  25   1              //P1M1=0xf0;      // 1111 0000   // ÉèÖÃP1.5.6.7.8 ¿ªÂ©Êä³ö
+  26   1              //P1M0=0xf0;      // 1111 0000  
+  27   1              SPI_SO=1;         // IOÅäÖÃ     
+  28   1              return 0;
+  29   1      }
+  30          
+  31          /******************************************************************
+  32          ¹¦ÄÜ£ºIOÄ£ÄâSPI£¬·¢ËÍÒ»¸ö×Ö½Ú
+  33          ²ÎÊý£ºxÊÇÒª·¢ËÍµÄ×Ö½Ú
+  34                ÆäÖÐis_initÎª1Ê±£¬Ð´µÄËÙ¶È·ÅÂý£¬³õÊ¼»¯SD¿¨SPIËÙ¶È²»ÄÜÌ«¸ß
+  35           ******************************************************************/
+  36          
+  37          void SD_SPI_WByte(unsigned char x) 
+  38          {
+  39   1              _dat=x;
+  40   1              
+  41   1              SPI_SI=_dat7;
+  42   1              SPI_CLK=0; 
+  43   1              if(is_init) delay(DELAY_TIME); 
+  44   1              SPI_CLK=1;
+  45   1              if(is_init) delay(DELAY_TIME);
+  46   1              
+  47   1              SPI_SI=_dat6;
+  48   1              SPI_CLK=0; 
+  49   1              if(is_init) delay(DELAY_TIME); 
+  50   1              SPI_CLK=1;
+  51   1              if(is_init) delay(DELAY_TIME);
+  52   1              
+  53   1              SPI_SI=_dat5;
+  54   1              SPI_CLK=0;
+  55   1              if(is_init) delay(DELAY_TIME);
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 2   
+
+  56   1              SPI_CLK=1;
+  57   1              if(is_init) delay(DELAY_TIME);
+  58   1              
+  59   1              SPI_SI=_dat4;
+  60   1              SPI_CLK=0;
+  61   1              if(is_init) delay(DELAY_TIME); 
+  62   1              SPI_CLK=1;
+  63   1              if(is_init) delay(DELAY_TIME);
+  64   1              
+  65   1              SPI_SI=_dat3;
+  66   1              SPI_CLK=0; 
+  67   1              if(is_init) delay(DELAY_TIME); 
+  68   1              SPI_CLK=1;
+  69   1              if(is_init) delay(DELAY_TIME);
+  70   1              
+  71   1              SPI_SI=_dat2;
+  72   1              SPI_CLK=0;
+  73   1              if(is_init) delay(DELAY_TIME); 
+  74   1              SPI_CLK=1;
+  75   1              if(is_init) delay(DELAY_TIME);
+  76   1              
+  77   1              SPI_SI=_dat1;
+  78   1              SPI_CLK=0; 
+  79   1              if(is_init) delay(DELAY_TIME); 
+  80   1              SPI_CLK=1;
+  81   1              if(is_init) delay(DELAY_TIME);
+  82   1              
+  83   1              SPI_SI=_dat0;
+  84   1              SPI_CLK=0;
+  85   1              if(is_init) delay(DELAY_TIME);  
+  86   1              SPI_CLK=1;
+  87   1              if(is_init) delay(DELAY_TIME);
+  88   1      }
+  89          
+  90          /******************************************************************
+  91          ¹¦ÄÜ£ºIOÄ£ÄâSPI£¬¶ÁÈ¡Ò»¸ö×Ö½Ú
+  92          ·µ»Ø£º·µ»Ø¶Áµ½µÄ×Ö½Ú
+  93           ******************************************************************/
+  94          unsigned char SD_SPI_RByte() //SPI¶ÁÒ»¸ö×Ö½Ú
+  95          {  
+  96   1              SPI_SO=1;
+  97   1              
+  98   1              SPI_CLK=1;
+  99   1              if(is_init) delay(DELAY_TIME);
+ 100   1              SPI_CLK=0;
+ 101   1              if(is_init) delay(DELAY_TIME); 
+ 102   1              _dat7=SPI_SO; 
+ 103   1              
+ 104   1              SPI_CLK=1;
+ 105   1              if(is_init) delay(DELAY_TIME);
+ 106   1              SPI_CLK=0;
+ 107   1              if(is_init) delay(DELAY_TIME);
+ 108   1              _dat6=SPI_SO; 
+ 109   1              
+ 110   1              SPI_CLK=1;
+ 111   1              if(is_init) delay(DELAY_TIME);
+ 112   1              SPI_CLK=0;
+ 113   1              if(is_init) delay(DELAY_TIME);
+ 114   1              _dat5=SPI_SO; 
+ 115   1              
+ 116   1              SPI_CLK=1;
+ 117   1              if(is_init) delay(DELAY_TIME);
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 3   
+
+ 118   1              SPI_CLK=0;
+ 119   1              if(is_init) delay(DELAY_TIME);
+ 120   1              _dat4=SPI_SO; 
+ 121   1              
+ 122   1              SPI_CLK=1;
+ 123   1              if(is_init) delay(DELAY_TIME);
+ 124   1              SPI_CLK=0;
+ 125   1              if(is_init) delay(DELAY_TIME); 
+ 126   1              _dat3=SPI_SO; 
+ 127   1              
+ 128   1              SPI_CLK=1;
+ 129   1              if(is_init) delay(DELAY_TIME);
+ 130   1              SPI_CLK=0;
+ 131   1              if(is_init) delay(DELAY_TIME);
+ 132   1              _dat2=SPI_SO; 
+ 133   1              
+ 134   1              SPI_CLK=1;
+ 135   1              if(is_init) delay(DELAY_TIME);
+ 136   1              SPI_CLK=0;
+ 137   1              if(is_init) delay(DELAY_TIME);
+ 138   1              _dat1=SPI_SO;
+ 139   1              
+ 140   1              SPI_CLK=1;
+ 141   1              if(is_init) delay(DELAY_TIME);
+ 142   1              SPI_CLK=0;
+ 143   1              if(is_init) delay(DELAY_TIME);
+ 144   1              _dat0=SPI_SO; 
+ 145   1              
+ 146   1              return (_dat);
+ 147   1      }
+ 148          
+ 149          /******************************************************************
+ 150          ¹¦ÄÜ£ºÏòSD¿¨Ð´ÃüÁî
+ 151          ²ÎÊý£ºSD¿¨µÄÃüÁîÊÇ6¸ö×Ö½Ú£¬pcmdÊÇÖ¸ÏòÃüÁî×Ö½ÚÐòÁÐµÄÖ¸Õë
+ 152          ·µ»Ø£ºÃüÁîÐ´Èëºó£¬µ÷ÓÃ²»³É¹¦£¬½«·µ»Ø0xff
+ 153           ******************************************************************/
+ 154          
+ 155          unsigned char SD_Write_Cmd(unsigned char *pcmd) 
+ 156          {
+ 157   1              unsigned char temp,time=0;
+ 158   1              
+ 159   1              SPI_CS=1;
+ 160   1              SD_SPI_WByte(0xff); //Ìá¸ß¼æÈÝÐÔ£¬Èç¹ûÃ»ÓÐÕâÀï£¬ÓÐÐ©SD¿¨¿ÉÄÜ²»Ö§³Ö   
+ 161   1              SPI_CS=0;
+ 162   1              while(0XFF!=SD_SPI_RByte()); //µÈ´ýSD¿¨×¼±¸ºÃ£¬ÔÙÏòÆä·¢ËÍÃüÁî
+ 163   1      
+ 164   1              SD_SPI_WByte(pcmd[0]);
+ 165   1              SD_SPI_WByte(pcmd[1]);
+ 166   1              SD_SPI_WByte(pcmd[2]);
+ 167   1              SD_SPI_WByte(pcmd[3]);
+ 168   1              SD_SPI_WByte(pcmd[4]);
+ 169   1              SD_SPI_WByte(pcmd[5]);
+ 170   1              if(pcmd[0]==0X1C) SD_SPI_RByte(); // Èç¹ûÊÇÍ£Ö¹ÃüÁî£¬Ìø¹ý¶àÓàµÄ×Ö½Ú
+ 171   1              do 
+ 172   1              {  
+ 173   2                      temp = SD_SPI_RByte();        // Ò»Ö±¶Á£¬Ö±µ½¶Áµ½µÄ²»ÊÇ0xff»ò³¬Ê±
+ 174   2                      time++;
+ 175   2              }while((temp==0xff)&&(time<TRY_TIME)); 
+ 176   1              
+ 177   1              return(temp);
+ 178   1      }
+ 179          
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 4   
+
+ 180           /******************************************************************
+ 181          ¹¦ÄÜ£ºSD¿¨³õÊ¼»¯£¬Õë¶ÔÓÚ²»Í¬µÄSD¿¨£¬ÈçMMC¡¢SD»òSDHC£¬³õÊ¼»¯·½·¨ÊÇ²»Í¬µÄ
+ 182          ·µ»Ø£ºµ÷ÓÃ³É¹¦£¬·µ»Ø0x00£¬·ñÔò·µ»Ø´íÎóÂë
+ 183           ******************************************************************/
+ 184          unsigned char SD_Init() 
+ 185          {  
+ 186   1              unsigned char time=0,temp=0,i=0; 
+ 187   1              unsigned char rbuf[4]={0};
+ 188   1              
+ 189   1              unsigned char pCMD0[6] ={0x40,0x00,0x00,0x00,0x00,0x95}; //CMD0£¬½«SD¿¨´ÓÄ¬ÈÏÉÏµçºóµÄSDÄ£Ê½ÇÐ»»µ½SPIÄ£Ê½£
+             -¬Ê¹SD¿¨½øÈëIDLE×´Ì¬
+ 190   1              unsigned char pCMD1[6] ={0x41,0x00,0x00,0x00,0x00,0x01}; //CMD1£¬MMC¿¨Ê¹ÓÃCMD1ÃüÁî½øÐÐ³õÊ¼»¯
+ 191   1              unsigned char pCMD8[6] ={0x48,0x00,0x00,0x01,0xAA,0x87}; //CMD8£¬ÓÃÓÚ¼ø±ðSD¿¨µÄ°æ±¾£¬²¢¿É´ÓÓ¦´ðµÃÖªSD¿¨µÄ
+             -¹¤×÷µçÑ¹
+ 192   1              unsigned char pCMD16[6]={0x50,0x00,0x00,0x02,0x00,0x01}; //CMD16£¬ÉèÖÃÉÈÇø´óÐ¡Îª512×Ö½Ú£¬´ËÃüÁîÓÃÓÚÔÚ³õÊ¼
+             -»¯Íê³ÉÖ®ºó½øÐÐÊÔÌ½ÐÔµÄ²Ù×÷£¬
+ 193   1                                                                       //Èç¹û²Ù×÷³É¹¦£¬ËµÃ÷³õÊ¼»¯È·Êµ³É¹¦
+ 194   1              unsigned char pCMD55[6]={0x77,0x00,0x00,0x00,0x00,0x01}; //CMD55£¬ÓÃÓÚ¸æÖªSD¿¨ºóÃæÊÇACMD£¬¼´Ó¦ÓÃ²ãÃüÁî CM
+             -D55+ACMD41ÅäºÏÊ¹ÓÃ
+ 195   1                                                                       //MMC¿¨Ê¹ÓÃCMD1À´½øÐÐ³õÊ¼»¯£¬¶øSD¿¨ÔòÊ¹ÓÃCMD55+A
+             -CMD41À´½øÐÐ³õÊ¼»¯
+ 196   1              unsigned char pACMD41H[6]={0x69,0x40,0x00,0x00,0x00,0x01}; //ACMD41,´ËÃüÁîÓÃÓÚ¼ì²âSD¿¨ÊÇ·ñ³õÊ¼»¯Íê³É£¬MMC
+             -¿¨£¬²»ÊÊÓÃ´ËÃüÁî£¬Õë¶Ô2.0µÄSD¿¨
+ 197   1              unsigned char pACMD41S[6]={0x69,0x00,0x00,0x00,0x00,0x01}; //ACMD41,´ËÃüÁîÓÃÓÚ¼ì²âSD¿¨ÊÇ·ñ³õÊ¼»¯Íê³É£¬MMC
+             -¿¨£¬²»ÊÊÓÃ´ËÃüÁî£¬Õë¶Ô1.0µÄSD¿¨
+ 198   1              
+ 199   1              unsigned char pCMD58[6]={0x7A,0x00,0x00,0x00,0x00,0x01}; //CMD58£¬ÓÃÓÚ¼ø±ðSD2.0µ½µ×ÊÇSDHC£¬»¹ÊÇÆÕÍ¨µÄSD¿¨
+             -£¬¶þÕß¶ÔÉÈÇøµØÖ·µÄÑ°Ö··½Ê½²»Í¬
+ 200   1       
+ 201   1              //******************** ¸´Î»SD¿¨¿ªÊ¼£¬ÓÃµ½CMD0£¬Ê¹ÓÃSD¿¨ÇÐ»»µ½SPIÄ£Ê½********************// 
+ 202   1              IO_SPI_Init();             // ¶ÔSPIÓÐ¹ØIO¿Ú³õÊ¼»¯
+ 203   1              is_init=1;                 // is_initÖÃÎª1£¬ÈÃSPIËÙ¶ÈÂýÏÂÀ´
+ 204   1              SPI_CS=1;
+ 205   1              for(i=0;i<0x0f;i++)        // Ê×ÏÈÒª·¢ËÍ×îÉÙ74¸öÊ±ÖÓÐÅºÅ£¬ÕâÊÇ±ØÐëµÄ£¡¼¤»îSD¿¨
+ 206   1              {
+ 207   2                      SD_SPI_WByte(0xff);    // 120¸öÊ±ÖÓ
+ 208   2              }  
+ 209   1              time=0;                         
+ 210   1              do
+ 211   1              { 
+ 212   2                      temp=SD_Write_Cmd(pCMD0);     //Ð´ÈëCMD0
+ 213   2                      time++;
+ 214   2                      if(time==TRY_TIME) 
+ 215   2                      { 
+ 216   3                              return(INIT_CMD0_ERROR); //CMD0Ð´ÈëÊ§°Ü
+ 217   3                      }
+ 218   2              }while(temp!=0x01);
+ 219   1              //*************************** ¸´Î»SD¿¨½áÊø ********************************************// 
+ 220   1      
+ 221   1              if(1==SD_Write_Cmd(pCMD8))      //Ð´ÈëCMD8£¬Èç¹û·µ»ØÖµÎª1£¬ÔòSD¿¨°æ±¾Îª2.0
+ 222   1              {
+ 223   2                      rbuf[0]=SD_SPI_RByte(); rbuf[1]=SD_SPI_RByte(); //¶ÁÈ¡4¸ö×Ö½ÚµÄR7»ØÓ¦£¬Í¨¹ýËü¿ÉÖª´ËSD¿¨ÊÇ·ñÖ§³Ö2.7~3.6Vµ
+             -Ä¹¤×÷µçÑ¹
+ 224   2                      rbuf[2]=SD_SPI_RByte(); rbuf[3]=SD_SPI_RByte(); 
+ 225   2                       
+ 226   2                      if(rbuf[2]==0X01 && rbuf[3]==0XAA)  //SD¿¨ÊÇ·ñÖ§³Ö2.7~3.6V,Ìõ¼þ³ÉÁ¢ÔòÖ§³Ö
+ 227   2                      {               
+ 228   3                              time=0;
+ 229   3                              do
+ 230   3                              {                                                                  
+ 231   4                                      SD_Write_Cmd(pCMD55);       // Ð´ÈëCMD55
+ 232   4                                      temp=SD_Write_Cmd(pACMD41H);   // Ð´ÈëACMD41£¬Õë¶ÔSD2.0
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 5   
+
+ 233   4                                      time++;
+ 234   4                                      if(time>=TRY_TIME) 
+ 235   4                                      { 
+ 236   5                                              return(INIT_SDV2_ACMD41_ERROR);//¶ÔSD2.0Ê¹ÓÃACMD41½øÐÐ³õÊ¼»¯Ê±²úÉú´íÎó
+ 237   5                                      }
+ 238   4                              }while(temp!=0);        
+ 239   3                              
+ 240   3                              if(0==SD_Write_Cmd(pCMD58)) //Ð´ÈëCMD58£¬¿ªÊ¼¼ø±ðSD2.0
+ 241   3                              {
+ 242   4                                      rbuf[0]=SD_SPI_RByte(); rbuf[1]=SD_SPI_RByte();  //¶ÁÈ¡4¸ö×Ö½ÚµÄOCR£¬ÆäÖÐCCSÖ¸Ã÷ÁËÊÇSDHC»¹ÊÇÆÕÍ¨µÄSD
+ 243   4                                      rbuf[2]=SD_SPI_RByte(); rbuf[3]=SD_SPI_RByte();         
+ 244   4                                      
+ 245   4                                      if(rbuf[0]&0x40) 
+ 246   4                                      {
+ 247   5                                              SD_Ver=SD_VER_V2HC; //SDHC¿¨    
+ 248   5                                              Addr_Mode=1; //SDHC¿¨µÄÉÈÇøÑ°Ö··½Ê½ÊÇÉÈÇøØ·
+ 249   5                                      }       
+ 250   4                                      else SD_Ver=SD_VER_V2; //ÆÕÍ¨µÄSD¿¨£¬2.0µÄ¿¨°üº¬SDHCºÍÒ»Ð©ÆÕÍ¨µÄ¿¨                              
+ 251   4                              }
+ 252   3                      }
+ 253   2              }
+ 254   1              else                          // SD V1.0»òMMC 
+ 255   1              {
+ 256   2                      // SD¿¨Ê¹ÓÃACMD41½øÐÐ³õÊ¼»¯£¬¶øMMCÊ¹ÓÃCMD1À´½øÐÐ³õÊ¼»¯£¬ÒÀ´ËÀ´½øÒ»²½ÅÐ¶ÏÊÇSD»¹ÊÇMMC
+ 257   2                      SD_Write_Cmd(pCMD55);            // Ð´ÈëCMD55
+ 258   2                      temp=SD_Write_Cmd(pACMD41S);     // Ð´ÈëACMD41£¬Õë¶ÔSD1.0
+ 259   2                      
+ 260   2                      if(temp<=1) //¼ì²é·µ»ØÖµÊÇ·ñÕýÈ·£¬Èç¹ûÕýÈ·£¬ËµÃ÷ACMD41ÃüÁî±»½ÓÊÜ£¬¼´ÎªSD¿¨
+ 261   2                      {
+ 262   3                              SD_Ver=SD_VER_V1; //ÆÕÍ¨µÄSD1.0¿¨£¬Ò»°ãÀ´ËµÈÝÁ¿²»»á³¬¹ý2G                               
+ 263   3                              time=0;
+ 264   3                              do
+ 265   3                              {
+ 266   4                                      SD_Write_Cmd(pCMD55);//Ð´ÈëCMD55
+ 267   4                                      temp=SD_Write_Cmd(pACMD41S);//Ð´ÈëACMD41£¬Õë¶ÔSD1.0
+ 268   4                                      time++;
+ 269   4                                      if(time>=TRY_TIME) 
+ 270   4                                      { 
+ 271   5                                              return(INIT_SDV1_ACMD41_ERROR);//¶ÔSD1.0Ê¹ÓÃACMD41½øÐÐ³õÊ¼»¯Ê±²úÉú´íÎó
+ 272   5                                      }
+ 273   4                              }while(temp!=0);                         
+ 274   3                      }
+ 275   2                      else //·ñÔòÎªMMC        
+ 276   2                      {
+ 277   3                              SD_Ver=SD_VER_MMC; //MMC¿¨£¬Ëü²»Ö§³ÖACMD41ÃüÁî£¬¶øÊÇÊ¹ÓÃCMD1½øÐÐ³õÊ¼»¯                          
+ 278   3                              time=0;
+ 279   3                              do
+ 280   3                              { 
+ 281   4                                      temp=SD_Write_Cmd(pCMD1);//Ð´ÈëCMD1
+ 282   4                                      time++;
+ 283   4                                      if(time>=TRY_TIME) 
+ 284   4                                      { 
+ 285   5                                              return(INIT_CMD1_ERROR);//MMC¿¨Ê¹ÓÃCMD1ÃüÁî½øÐÐ³õÊ¼»¯ÖÐ²úÉú´íÎó
+ 286   5                                      }
+ 287   4                              }while(temp!=0);                        
+ 288   3                      }
+ 289   2              }
+ 290   1              
+ 291   1              if(0!=SD_Write_Cmd(pCMD16)) //SD¿¨µÄ¿é´óÐ¡±ØÐëÎª512×Ö½Ú
+ 292   1              {
+ 293   2                      SD_Ver=SD_VER_ERR; //Èç¹û²»³É¹¦£¬Ôò´Ë¿¨ÎªÎÞ·¨Ê¶±ðµÄ¿¨
+ 294   2                      return INIT_ERROR;
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 6   
+
+ 295   2              }       
+ 296   1              
+ 297   1              SPI_CS=1;             // ¹Ø±ÕSD¿¨µÄÆ¬Ñ¡ 
+ 298   1              SD_SPI_WByte(0xFF);   // °´ÕÕSD¿¨µÄ²Ù×÷Ê±ÐòÔÚÕâÀï²¹8¸öÊ±ÖÓ 
+ 299   1              
+ 300   1              is_init=0;            // ³õÊ¼»¯Íê±Ï£¬½«is_initÉèÖÃÎª0,ÎªÁËÌá¸ßÒÔºóµÄÊý¾Ý´«ÊäËÙ¶È
+ 301   1              
+ 302   1              return 0;              //·µ»Ø0,ËµÃ÷³õÊ¼»¯²Ù×÷³É¹¦
+ 303   1      }  
+ 304          
+ 305          /****************************************************************************
+ 306          ¹¦ÄÜ£º½«bufferÖ¸ÏòµÄ512¸ö×Ö½ÚµÄÊý¾ÝÐ´Èëµ½SD¿¨µÄaddrÉÈÇøÖÐ
+ 307          ²ÎÊý£ºaddr:ÉÈÇøµØÖ·
+ 308                buffer:Ö¸ÏòÊý¾Ý»º³åÇøµÄÖ¸Õë
+ 309          ·µ»Ø£ºµ÷ÓÃ³É¹¦£¬·µ»Ø0x00£¬·ñÔò·µ»Ø´íÎóÂë
+ 310                SD¿¨³õÊ¼»¯³É¹¦ºó£¬¶ÁÐ´ÉÈÇøÊ±£¬¾¡Á¿½«SPIËÙ¶ÈÌáÉÏÀ´£¬Ìá¸ßÐ§ÂÊ
+ 311           ****************************************************************************/
+ 312          unsigned char SD_Write_Sector(unsigned long addr,unsigned char *buffer) //ÏòSD¿¨ÖÐµÄÖ¸¶¨µØÖ·µÄÉÈÇøÐ´Èë512¸
+             -ö×Ö½Ú£¬Ê¹ÓÃCMD24£¨24ºÅÃüÁî£©
+ 313          {  
+ 314   1              unsigned char temp,time;
+ 315   1              unsigned char i=0;
+ 316   1              unsigned char pCMD24[]={0x58,0x00,0x00,0x00,0x00,0xff}; //ÏòSD¿¨ÖÐµ¥¸ö¿é£¨512×Ö½Ú£¬Ò»¸öÉÈÇø£©Ð´ÈëÊý¾Ý£¬ÓÃ
+             -CMD24
+ 317   1              
+ 318   1              if(!Addr_Mode) addr<<=9; //addr = addr * 512    ½«¿éµØÖ·£¨ÉÈÇøµØÖ·£©×ªÎª×Ö½ÚµØÖ·
+ 319   1              
+ 320   1              pCMD24[1]=addr>>24; //½«×Ö½ÚµØÖ·Ð´Èëµ½CMD24×Ö½ÚÐòÁÐÖÐ
+ 321   1              pCMD24[2]=addr>>16;
+ 322   1              pCMD24[3]=addr>>8;
+ 323   1              pCMD24[4]=addr;         
+ 324   1              time=0;
+ 325   1              do
+ 326   1              {  
+ 327   2                      temp=SD_Write_Cmd(pCMD24);
+ 328   2                      time++;
+ 329   2                      if(time==TRY_TIME) 
+ 330   2                      { 
+ 331   3                              return(temp); //ÃüÁîÐ´ÈëÊ§°Ü
+ 332   3                      }  
+ 333   2              }while(temp!=0);        
+ 334   1              while(0XFF!=SD_SPI_RByte()); //µÈ´ýSD¿¨×¼±¸ºÃ£¬ÔÙÏòÆä·¢ËÍÃüÁî¼°ºóÐøµÄÊý¾Ý       
+ 335   1              SD_SPI_WByte(0xFE);          //Ð´Èë¿ªÊ¼×Ö½Ú 0xfe£¬ºóÃæ¾ÍÊÇÒªÐ´ÈëµÄ512¸ö×Ö½ÚµÄÊý¾Ý
+ 336   1                      
+ 337   1              for(i=0;i<4;i++) //½«»º³åÇøÖÐÒªÐ´ÈëµÄ512¸ö×Ö½ÚÐ´ÈëSD¿¨£¬¼õÉÙÑ­»·´ÎÊý£¬Ìá¸ßÊý¾ÝÐ´ÈëËÙ¶È
+ 338   1              {
+ 339   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 340   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 341   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 342   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 343   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 344   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 345   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 346   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 347   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 348   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 349   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 350   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 351   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 352   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 353   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 354   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 7   
+
+ 355   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 356   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 357   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 358   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 359   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 360   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 361   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 362   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 363   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 364   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 365   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 366   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 367   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 368   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 369   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 370   2              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));
+ 371   2              }
+ 372   1              
+ 373   1              SD_SPI_WByte(0xFF); 
+ 374   1              SD_SPI_WByte(0xFF); //Á½¸ö×Ö½ÚµÄCRCÐ£ÑéÂë£¬²»ÓÃ¹ØÐÄ        
+ 375   1              temp=SD_SPI_RByte();   //¶ÁÈ¡·µ»ØÖµ
+ 376   1              if((temp & 0x1F)!=0x05) //Èç¹û·µ»ØÖµÊÇ XXX00101 ËµÃ÷Êý¾ÝÒÑ¾­±»SD¿¨½ÓÊÜÁË
+ 377   1              {
+ 378   2                      return(WRITE_BLOCK_ERROR); //Ð´¿éÊý¾ÝÊ§°Ü
+ 379   2              }       
+ 380   1              while(0xFF!=SD_SPI_RByte());  //µÈµ½SD¿¨²»Ã¦£¨Êý¾Ý±»½ÓÊÜÒÔºó£¬SD¿¨Òª½«ÕâÐ©Êý¾ÝÐ´Èëµ½×ÔÉíµÄFLASHÖÐ£¬ÐèÒªÒ»
+             -¸öÊ±¼ä£©
+ 381   1                                                                       //Ã¦Ê±£¬¶Á»ØÀ´µÄÖµÎª0x00,²»Ã¦Ê±£¬Îª0xff        
+ 382   1              SPI_CS=1;
+ 383   1              SD_SPI_WByte(0xFF); //°´ÕÕSD¿¨µÄ²Ù×÷Ê±ÐòÔÚÕâÀï²¹8¸öÊ±ÖÓ         
+ 384   1              return(0);               //·µ»Ø0,ËµÃ÷Ð´ÉÈÇø²Ù×÷³É¹¦
+ 385   1      } 
+ 386          
+ 387          /****************************************************************************
+ 388          ¹¦ÄÜ£º¶ÁÈ¡addrÉÈÇøµÄ512¸ö×Ö½Úµ½bufferÖ¸ÏòµÄÊý¾Ý»º³åÇø
+ 389          ²ÎÊý£ºaddr:ÉÈÇøµØÖ·
+ 390                buffer:Ö¸ÏòÊý¾Ý»º³åÇøµÄÖ¸Õë
+ 391          ·µ»Ø£ºµ÷ÓÃ³É¹¦£¬·µ»Ø0x00£¬·ñÔò·µ»Ø´íÎóÂë
+ 392                SD¿¨³õÊ¼»¯³É¹¦ºó£¬¶ÁÐ´ÉÈÇøÊ±£¬¾¡Á¿½«SPIËÙ¶ÈÌáÉÏÀ´£¬Ìá¸ßÐ§ÂÊ
+ 393           ****************************************************************************/
+ 394          
+ 395          unsigned char SD_Read_Sector(unsigned long addr,unsigned char *buffer)//´ÓSD¿¨µÄÖ¸¶¨ÉÈÇøÖÐ¶Á³ö512¸ö×Ö½Ú£¬Ê
+             -¹ÓÃCMD17£¨17ºÅÃüÁî£©
+ 396          {
+ 397   1               unsigned char i;
+ 398   1               unsigned char time,temp;               
+ 399   1               unsigned char pCMD17[]={0x51,0x00,0x00,0x00,0x00,0x01}; //CMD17µÄ×Ö½ÚÐòÁÐ         
+ 400   1               if(!Addr_Mode) addr<<=9; //sector = sector * 512          ½«¿éµØÖ·£¨ÉÈÇøµØÖ·£©×ªÎª×Ö½ÚµØÖ·
+ 401   1              
+ 402   1               pCMD17[1]=addr>>24; //½«×Ö½ÚµØÖ·Ð´Èëµ½CMD17×Ö½ÚÐòÁÐÖÐ
+ 403   1               pCMD17[2]=addr>>16;
+ 404   1               pCMD17[3]=addr>>8;
+ 405   1               pCMD17[4]=addr;        
+ 406   1              
+ 407   1               time=0;
+ 408   1               do
+ 409   1               {  
+ 410   2                      temp=SD_Write_Cmd(pCMD17); //Ð´ÈëCMD17
+ 411   2                      time++;
+ 412   2                      if(time==TRY_TIME) 
+ 413   2                      {
+ 414   3                              return(READ_BLOCK_ERROR); //¶Á¿éÊ§°Ü
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 8   
+
+ 415   3                      }
+ 416   2               }while(temp!=0);                               
+ 417   1               while(SD_SPI_RByte()!= 0xFE); //Ò»Ö±¶Á£¬µ±¶Áµ½0xfeÊ±£¬ËµÃ÷ºóÃæµÄÊÇ512×Ö½ÚµÄÊý¾ÝÁË
+ 418   1              
+ 419   1               for(i=0;i<4;i++)        //½«Êý¾ÝÐ´Èëµ½Êý¾Ý»º³åÇøÖÐ
+ 420   1               {      
+ 421   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 422   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 423   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 424   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 425   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 426   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 427   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 428   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 429   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 430   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 431   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 432   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 433   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 434   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 435   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 436   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 437   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 438   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 439   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 440   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 441   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 442   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 443   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 444   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 445   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 446   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 447   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 448   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 9   
+
+ 449   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 450   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 451   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 452   2                *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RBy
+             -te();
+ 453   2               }
+ 454   1              
+ 455   1               SD_SPI_RByte();
+ 456   1               SD_SPI_RByte();//¶ÁÈ¡Á½¸ö×Ö½ÚµÄCRCÐ£ÑéÂë£¬²»ÓÃ¹ØÐÄËüÃÇ         
+ 457   1               SPI_CS=1;
+ 458   1               SD_SPI_WByte(0xFF); //°´ÕÕSD¿¨µÄ²Ù×÷Ê±ÐòÔÚÕâÀï²¹8¸öÊ±ÖÓ        
+ 459   1               return 0;
+ 460   1      }
+ 461          
+ 462          ///****************************************************************************
+ 463          // ¹¦ÄÜ£ºÏòaddrÉÈÇø¿ªÊ¼µÄnsec¸öÉÈÇøÐ´ÈëÊý¾Ý£¨¡ïÓ²¼þ¶àÉÈÇøÐ´Èë£©
+ 464          // ²ÎÊý£ºnsec:ÉÈÇøÊý
+ 465          //       addr:¿ªÊ¼ÉÈÇøµØÖ·
+ 466          //       buffer:Ö¸ÏòÊý¾Ý»º³åÇøµÄÖ¸Õë
+ 467          // ·µ»Ø£ºµ÷ÓÃ³É¹¦£¬·µ»Ø0x00£¬·ñÔò·µ»Ø´íÎóÂë
+ 468          //       SD¿¨³õÊ¼»¯³É¹¦ºó£¬¶ÁÐ´ÉÈÇøÊ±£¬¾¡Á¿½«SPIËÙ¶ÈÌáÉÏÀ´£¬Ìá¸ßÐ§ÂÊ
+ 469          // ****************************************************************************/         
+ 470          //unsigned char SD_Write_nSector(unsigned long nsec,unsigned long addr,unsigned char *buffer)   
+ 471          //{  
+ 472          //      unsigned char temp,time;
+ 473          //      unsigned long i=0,j=0;          
+ 474          //      unsigned char pCMD25[6]={0x59,0x00,0x00,0x00,0x00,0x01}; //CMD25ÓÃÓÚÍê³É¶à¿éÁ¬ÐøÐ´
+ 475          //      unsigned char pCMD55[6]={0x77,0x00,0x00,0x00,0x00,0x01}; //CMD55£¬ÓÃÓÚ¸æÖªSD¿¨ºóÃæÊÇACMD,CMD55+ACMD23
+ 476          //      unsigned char pACMD23[6]={0x57,0x00,0x00,0x00,0x00,0x01};//CMD23£¬¶à¿éÁ¬ÐøÔ¤²Á³ý        
+ 477          //      
+ 478          //      if(!Addr_Mode) addr<<=9;        
+ 479          //      pCMD25[1]=addr>>24;
+ 480          //      pCMD25[2]=addr>>16;
+ 481          //      pCMD25[3]=addr>>8;
+ 482          //      pCMD25[4]=addr;
+ 483          //      
+ 484          //      pACMD23[1]=nsec>>24;
+ 485          //      pACMD23[2]=nsec>>16;
+ 486          //      pACMD23[3]=nsec>>8;
+ 487          //      pACMD23[4]=nsec; 
+ 488          //      
+ 489          //      if(SD_Ver!=SD_VER_MMC) //Èç¹û²»ÊÇMMC¿¨£¬ÔòÊ×ÏÈÐ´ÈëÔ¤²Á³ýÃüÁî£¬CMD55+ACMD23£¬ÕâÑùºóÃæµÄÁ¬Ðø¿éÐ´µÄËÙ¶È»á¸
+             -ü¿ì
+ 490          //      {
+ 491          //              SD_Write_Cmd(pCMD55);
+ 492          //              SD_Write_Cmd(pACMD23);
+ 493          //      }
+ 494          //      
+ 495          //      time=0;
+ 496          //      do
+ 497          //      {  
+ 498          //              temp=SD_Write_Cmd(pCMD25);
+ 499          //              time++;
+ 500          //              if(time==TRY_TIME) 
+ 501          //              { 
+ 502          //                      return(WRITE_CMD25_ERROR); //ÃüÁîÐ´ÈëÊ§°Ü
+ 503          //              }
+ 504          //      }while(temp!=0);        
+ 505          //      while(0XFF!=SD_SPI_RByte()); //µÈ´ýSD¿¨×¼±¸ºÃ£¬ÔÙÏòÆä·¢ËÍÃüÁî¼°ºóÐøµÄÊý¾Ý       
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 10  
+
+ 506          //      for(j=0;j<nsec;j++)
+ 507          //      {
+ 508          //              SD_SPI_WByte(0xFC);//Ð´Èë¿ªÊ¼×Ö½Ú 0xfc£¬ºóÃæ¾ÍÊÇÒªÐ´ÈëµÄ512¸ö×Ö½ÚµÄÊý¾Ý 
+ 509          //              
+ 510          //              for(i=0;i<4;i++) //½«»º³åÇøÖÐÒªÐ´ÈëµÄ512¸ö×Ö½ÚÐ´ÈëSD¿¨
+ 511          //              {
+ 512          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 513          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 514          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 515          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 516          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 517          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 518          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 519          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 520          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 521          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 522          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 523          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 524          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 525          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 526          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 527          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 528          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 529          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 530          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 531          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 532          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 533          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 534          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 535          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 536          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 537          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 538          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 539          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 11  
+
+ 540          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 541          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 542          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 543          //              SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++));SD_SPI_WByte(*(buffer++)
+             -);
+ 544          //              }
+ 545          //              
+ 546          //              SD_SPI_WByte(0xFF); 
+ 547          //              SD_SPI_WByte(0xFF); //Á½¸ö×Ö½ÚµÄCRCÐ£ÑéÂë£¬²»ÓÃ¹ØÐÄ
+ 548          //                 
+ 549          //              temp=SD_SPI_RByte();   //¶ÁÈ¡·µ»ØÖµ
+ 550          //              if((temp & 0x1F)!=0x05) //Èç¹û·µ»ØÖµÊÇ XXX00DELAY_TIME1 ËµÃ÷Êý¾ÝÒÑ¾­±»SD¿¨½ÓÊÜÁË
+ 551          //              {
+ 552          //                      return(WRITE_NBLOCK_ERROR); //Ð´¿éÊý¾ÝÊ§°Ü
+ 553          //              }       
+ 554          //              while(0xFF!=SD_SPI_RByte());//µÈµ½SD¿¨²»Ã¦£¨Êý¾Ý±»½ÓÊÜÒÔºó£¬SD¿¨Òª½«ÕâÐ©Êý¾ÝÐ´Èëµ½×ÔÉíµÄFLASHÖÐ£¬ÐèÒªÒ
+             -»¸öÊ±¼ä£©
+ 555          //                                                                        //Ã¦Ê±£¬¶Á»ØÀ´µÄÖµÎª0x00,²»Ã¦Ê±£¬Îª0xff
+ 556          //      }       
+ 557          //      SD_SPI_WByte(0xFD);             
+ 558          //      while(0xFF!=SD_SPI_RByte());
+ 559          //      
+ 560          //      SPI_CS=1;      //¹Ø±ÕÆ¬Ñ¡
+ 561          //      
+ 562          //      SD_SPI_WByte(0xFF);//°´ÕÕSD¿¨µÄ²Ù×÷Ê±ÐòÔÚÕâÀï²¹8¸öÊ±ÖÓ
+ 563          //      
+ 564          //      return(0);               //·µ»Ø0,ËµÃ÷Ð´ÉÈÇø²Ù×÷³É¹¦
+ 565          //} 
+ 566          //
+ 567          ///****************************************************************************
+ 568          // ¹¦ÄÜ£º¶ÁÈ¡addrÉÈÇø¿ªÊ¼µÄnsec¸öÉÈÇøµÄÊý¾Ý£¨¡ïÓ²¼þ¶àÉÈÇø¶ÁÈ¡£©
+ 569          // ²ÎÊý£ºnsec:ÉÈÇøÊý
+ 570          //       addr:¿ªÊ¼ÉÈÇøµØÖ·
+ 571          //       buffer:Ö¸ÏòÊý¾Ý»º³åÇøµÄÖ¸Õë
+ 572          // ·µ»Ø£ºµ÷ÓÃ³É¹¦£¬·µ»Ø0x00£¬·ñÔò·µ»Ø´íÎóÂë
+ 573          //       SD¿¨³õÊ¼»¯³É¹¦ºó£¬¶ÁÐ´ÉÈÇøÊ±£¬¾¡Á¿½«SPIËÙ¶ÈÌáÉÏÀ´£¬Ìá¸ßÐ§ÂÊ
+ 574          // ****************************************************************************/
+ 575          //
+ 576          //unsigned char SD_Read_nSector(unsigned long nsec,unsigned long addr,unsigned char *buffer)
+ 577          //{
+ 578          //       unsigned char temp,time;
+ 579          //       unsigned long i=0,j=0;         
+ 580          //       unsigned char pCMD18[6]={0x52,0x00,0x00,0x00,0x00,0x01}; //CMD18µÄ×Ö½ÚÐòÁÐ
+ 581          //       unsigned char pCMD12[6]={0x1C,0x00,0x00,0x00,0x00,0x01}; //CMD12£¬Ç¿ÖÆÍ£Ö¹ÃüÁî    
+ 582          //       if(!Addr_Mode) addr<<=9; //sector = sector * 512          ½«¿éµØÖ·£¨ÉÈÇøµØÖ·£©×ªÎª×Ö½ÚµØÖ·
+ 583          //      
+ 584          //       pCMD18[1]=addr>>24; //½«×Ö½ÚµØÖ·Ð´Èëµ½CMD17×Ö½ÚÐòÁÐÖÐ
+ 585          //       pCMD18[2]=addr>>16;
+ 586          //       pCMD18[3]=addr>>8;
+ 587          //       pCMD18[4]=addr;        
+ 588          //       time=0;
+ 589          //       do
+ 590          //       {  
+ 591          //              temp=SD_Write_Cmd(pCMD18); //Ð´ÈëCMD18
+ 592          //              time++;
+ 593          //              if(time==TRY_TIME) 
+ 594          //              {
+ 595          //                      return(READ_CMD18_ERROR); //Ð´ÈëCMD18Ê§°Ü
+ 596          //              }
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 12  
+
+ 597          //       }while(temp!=0); 
+ 598          //               
+ 599          //       for(j=0;j<nsec;j++)
+ 600          //       {  
+ 601          //              while(SD_SPI_RByte()!= 0xFE); //Ò»Ö±¶Á£¬µ±¶Áµ½0xfeÊ±£¬ËµÃ÷ºóÃæµÄÊÇ512×Ö½ÚµÄÊý¾ÝÁË 
+ 602          //                              
+ 603          //              for(i=0;i<4;i++)         //½«Êý¾ÝÐ´Èëµ½Êý¾Ý»º³åÇøÖÐ
+ 604          //              {       
+ 605          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 606          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 607          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 608          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 609          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 610          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 611          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 612          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 613          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 614          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 615          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 616          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 617          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 618          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 619          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 620          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 621          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 622          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 623          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 624          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 625          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 626          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 627          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 628          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 629          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 630          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 631          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 13  
+
+ 632          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 633          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 634          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 635          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 636          //              *(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RByte();*(buffer++)=SD_SPI_RB
+             -yte();
+ 637          //              }               
+ 638          //              SD_SPI_RByte();
+ 639          //              SD_SPI_RByte();//¶ÁÈ¡Á½¸ö×Ö½ÚµÄCRCÐ£ÑéÂë£¬²»ÓÃ¹ØÐÄËü
+ 640          //       } 
+ 641          //              
+ 642          //       SD_Write_Cmd(pCMD12); //Ð´ÈëCMD12ÃüÁî£¬Í£Ö¹Êý¾Ý¶ÁÈ¡    
+ 643          //       SPI_CS=1;
+ 644          //       SD_SPI_WByte(0xFF); //°´ÕÕSD¿¨µÄ²Ù×÷Ê±ÐòÔÚÕâÀï²¹8¸öÊ±ÖÓ        
+ 645          //       return 0;
+ 646          //}
+ 647          //
+ 648          //
+ 649          ///******************************************************************
+ 650          // ¹¦ÄÜ£º¶ÔSD¿¨Èô¸É¸öÉÈÇø½øÐÐ²Á³ý£¬²Á³ýºóÉÈÇøÖÐµÄÊý¾Ý´ó²¿·ÖÇé¿ö
+ 651          //       ÏÂÎªÈ«0£¨ÓÐÐ©¿¨²Á³ýºóÎªÈ«0XFF£¬ÈçÒªÊ¹ÓÃ´Ëº¯Êý£¬ÇëÈ·ÈÏ£©
+ 652          // ²ÎÊý£ºaddr_sta£º¿ªÊ¼ÉÈÇøµØÖ·   addr_end£º½áÊøÉÈÇøµØÖ·
+ 653          // ·µ»Ø£ºµ÷ÓÃ³É¹¦£¬·µ»Ø0x00£¬·ñÔò·µ»Ø´íÎóÂë
+ 654          // ******************************************************************/
+ 655          //unsigned char SD_Erase_nSector(unsigned long addr_sta,unsigned long addr_end)
+ 656          //{
+ 657          //      unsigned char temp,time;
+ 658          //      unsigned char i=0;
+ 659          //      unsigned char pCMD32[]={0x60,0x00,0x00,0x00,0x00,0xff}; //ÉèÖÃ²Á³ýµÄ¿ªÊ¼ÉÈÇøµØÖ·
+ 660          //      unsigned char pCMD33[]={0x61,0x00,0x00,0x00,0x00,0xff}; //ÉèÖÃ²Á³ýµÄ½áÊøÉÈÇøµØÖ·
+ 661          //      unsigned char pCMD38[]={0x66,0x00,0x00,0x00,0x00,0xff}; //²Á³ýÉÈÇø
+ 662          //      
+ 663          //      if(!Addr_Mode) {addr_sta<<=9;addr_end<<=9;} //addr = addr * 512 ½«¿éµØÖ·£¨ÉÈÇøµØÖ·£©×ªÎª×Ö½ÚµØÖ·
+ 664          //      
+ 665          //      pCMD32[1]=addr_sta>>24; //½«¿ªÊ¼µØÖ·Ð´Èëµ½CMD32×Ö½ÚÐòÁÐÖÐ
+ 666          //      pCMD32[2]=addr_sta>>16;
+ 667          //      pCMD32[3]=addr_sta>>8;
+ 668          //      pCMD32[4]=addr_sta;      
+ 669          //      
+ 670          //      pCMD33[1]=addr_end>>24; //½«¿ªÊ¼µØÖ·Ð´Èëµ½CMD32×Ö½ÚÐòÁÐÖÐ
+ 671          //      pCMD33[2]=addr_end>>16;
+ 672          //      pCMD33[3]=addr_end>>8;
+ 673          //      pCMD33[4]=addr_end;     
+ 674          //      
+ 675          //      time=0;
+ 676          //      do
+ 677          //      {  
+ 678          //              temp=SD_Write_Cmd(pCMD32);
+ 679          //              time++;
+ 680          //              if(time==TRY_TIME) 
+ 681          //              { 
+ 682          //                      return(temp); //ÃüÁîÐ´ÈëÊ§°Ü
+ 683          //              }
+ 684          //      }while(temp!=0);  
+ 685          //      
+ 686          //      time=0;
+ 687          //      do
+ 688          //      {  
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 14  
+
+ 689          //              temp=SD_Write_Cmd(pCMD33);
+ 690          //              time++;
+ 691          //              if(time==TRY_TIME) 
+ 692          //              { 
+ 693          //                      return(temp); //ÃüÁîÐ´ÈëÊ§°Ü
+ 694          //              }
+ 695          //      }while(temp!=0);  
+ 696          //      
+ 697          //      time=0;
+ 698          //      do
+ 699          //      {  
+ 700          //              temp=SD_Write_Cmd(pCMD38);
+ 701          //              time++;
+ 702          //              if(time==TRY_TIME) 
+ 703          //              { 
+ 704          //                      return(temp); //ÃüÁîÐ´ÈëÊ§°Ü
+ 705          //              }
+ 706          //      }while(temp!=0);        
+ 707          //      return 0;        
+ 708          //}
+ 709          //
+ 710          //
+ 711          /****************************************************************************
+ 712           ¹¦ÄÜ£º»ñÈ¡SD¿¨µÄ×ÜÉÈÇøÊý£¨Í¨¹ý¶ÁÈ¡SD¿¨µÄCSD¼ÄÆ÷×é¼ÆËãµÃµ½×ÜÉÈÇøÊý£©
+ 713           ·µ»Ø£º·µ»ØSD¿¨µÄ×ÜÉÈÇøÊý
+ 714           ****************************************************************************/
+ 715          unsigned long SD_GetTotalSec(void)
+ 716          {
+ 717   1              unsigned char pCSD[16];
+ 718   1              unsigned long Capacity;  
+ 719   1              unsigned char n,i;
+ 720   1              unsigned short csize;   
+ 721   1              unsigned char pCMD9[6]={0x49,0x00,0x00,0x00,0x00,0x01}; //CMD9  
+ 722   1              
+ 723   1              if(SD_Write_Cmd(pCMD9)!=0) //Ð´ÈëCMD9ÃüÁî
+ 724   1              {
+ 725   2                      return GET_CSD_ERROR; //»ñÈ¡CSDÊ±²úÉú´íÎó
+ 726   2              }       
+ 727   1              while(SD_SPI_RByte()!= 0xFE); //Ò»Ö±¶Á£¬µ±¶Áµ½0xfeÊ±£¬ËµÃ÷ºóÃæµÄÊÇ16×Ö½ÚµÄCSDÊý¾Ý       
+ 728   1              for(i=0;i<16;i++) pCSD[i]=SD_SPI_RByte(); //¶ÁÈ¡CSDÊý¾Ý 
+ 729   1              SD_SPI_RByte();
+ 730   1              SD_SPI_RByte();      // ¶ÁÈ¡Á½¸ö×Ö½ÚµÄCRCÐ£ÑéÂë£¬²»ÓÃ¹ØÐÄËüÃÇ
+ 731   1              
+ 732   1              SPI_CS=1;
+ 733   1              SD_SPI_WByte(0xFF);  // °´ÕÕSD¿¨µÄ²Ù×÷Ê±ÐòÔÚÕâÀï²¹8¸öÊ±ÖÓ 
+ 734   1              
+ 735   1              //Èç¹ûÎªSDHC¿¨£¬¼´´óÈÝÁ¿¿¨£¬°´ÕÕÏÂÃæ·½Ê½¼ÆËã
+ 736   1              if((pCSD[0]&0xC0)==0x40)         //SD2.0µÄ¿¨
+ 737   1              {       
+ 738   2                      csize=pCSD[9]+(((unsigned short)(pCSD[8]))<<8)+1;
+ 739   2                      Capacity=((unsigned long)csize)<<10;                    // µÃµ½ÉÈÇøÊý                      
+ 740   2              }
+ 741   1              else //SD1.0µÄ¿¨
+ 742   1              {       
+ 743   2                      n=(pCSD[5]&0x0F)+((pCSD[10]&0x80)>>7)+((pCSD[9]&0x03)<<1)+2;
+ 744   2                      csize=(pCSD[8]>>6)+((unsigned short)pCSD[7]<<2)+((unsigned short)(pCSD[6]&0x03)<<0x0A)+1;
+ 745   2                      Capacity=(unsigned long)csize<<(n-9);                  // µÃµ½ÉÈÇøÊý   
+ 746   2              }
+ 747   1              return Capacity;
+ 748   1      }
+
+
+C51 COMPILER V9.54   SD                                                                    05/29/2018 20:45:20 PAGE 15  
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2818    ----
+   CONSTANT SIZE    =     70    ----
+   XDATA SIZE       =      2     119
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      1    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

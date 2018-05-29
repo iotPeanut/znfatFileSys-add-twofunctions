@@ -1,0 +1,29 @@
+C51 COMPILER V9.54   MYFUN                                                                 05/29/2018 20:45:19 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MYFUN
+OBJECT MODULE PLACED IN myfun.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE myfun.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "myfun.h"
+   2          void delay(unsigned int time) 
+   3          {
+   4   1              while(time--);
+   5   1      }
+   6          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     11    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

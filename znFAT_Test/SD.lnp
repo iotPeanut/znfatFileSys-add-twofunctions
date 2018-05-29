@@ -1,0 +1,8 @@
+"main.obj",
+"myfun.obj",
+"sd.obj",
+"uart.obj",
+"deviceio.obj",
+"znFAT.obj" 
+TO "SD" 
+RAMSIZE(256) 
